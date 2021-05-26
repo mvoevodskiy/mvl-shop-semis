@@ -28,11 +28,11 @@ class DeliveryController extends MVLoaderBase {
      * @return {Promise<float>}
      */
     this.cost = async (deliveryNameOrId, order = null) => {
-      const payment = this.get(deliveryNameOrId)
-      if (payment) {
-        let cost = payment.cost
-        if (!this.MT.empty(payment.handler)) {
-          cost = await this.call(payment.handler, 'cost', order)
+      const delivery = this.get(deliveryNameOrId)
+      if (delivery) {
+        let cost = delivery.cost
+        if (!this.MT.empty(delivery.controller)) {
+          cost = await this.call(delivery.controller, 'cost', delivery, order)
         }
         console.log('DELIVERY COST', cost)
         return isNaN(cost) ? 0 : cost
@@ -42,12 +42,12 @@ class DeliveryController extends MVLoaderBase {
 
     /**
      *
-     * @param {string} handler
+     * @param {string} controller
      * @param {string} methodName
      * @param {*} [params]
      * @return {basicResponse|*}
      */
-    this.call = (handler, methodName, params = []) => this.App.ext.semis.mvlShop.call(handler, methodName, params)
+    this.call = (controller, methodName, ...params) => this.App.ext.semis.mvlShop.call(controller, methodName, ...params)
   }
 
   async init () {

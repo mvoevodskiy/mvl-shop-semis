@@ -1,12 +1,15 @@
 const { MVLoaderBase } = require('mvloader')
+const { URL } = require('url')
+const mt = require('mvtools')
 
 class OrderController extends MVLoaderBase {
   constructor (App, ...config) {
     const localDefaults = {
-      defaults: {
-        payment: 'cash',
-        delivery: 'pickup'
-      }
+      payment: 'cash',
+      delivery: 'pickup',
+      hostUrl: '',
+      pageSuccess: '',
+      pageFailure: ''
     }
     super(localDefaults, ...config)
     this.App = App
@@ -18,19 +21,19 @@ class OrderController extends MVLoaderBase {
 
   async initFinish () {
     super.initFinish()
-    this.Cart = this.App.ext.controllers.mvlShopCart
-    this.Status = this.App.ext.controllers.mvlShopOrderStatus
-    this.Payment = this.App.ext.controllers.mvlShopPayment
-    this.Delivery = this.App.ext.controllers.mvlShopDelivery
-    this.Order = this.App.ext.controllers.mvlShopOrder
+    this.Shop = this.App.ext.semis.mvlShop
   }
 
   async get (orderId) {
-    return (typeof orderId === 'number') ? this.App.DB.models.mvlShopOrder.findByPk(orderId) : orderId
+    return (typeof orderId === 'number' || typeof orderId === 'string')
+      ? this.App.DB.models.mvlShopOrder.findOne({
+          where: { id: orderId }
+        })
+      : orderId
   }
 
   async submit (cartOrCustomerId, customerId, orderData = undefined) {
-    const cart = await this.Cart.get(cartOrCustomerId)
+    const cart = await this.Shop.Cart.get(cartOrCustomerId)
     const customer = await this.getCustomer(customerId)
 
     if (cart.goods.length === 0 || this.MT.empty(customer)) return false
@@ -47,38 +50,61 @@ class OrderController extends MVLoaderBase {
 
     let where = {}
 
-    if (typeof orderData.payment === 'number') where = { id: orderData.payment }
-    else if (typeof orderData.payment === 'string') where = { key: orderData.payment }
-    else where = { key: this.config.defaults.payment }
-    const payment = await this.App.DB.models.mvlShopPayment.findOne({ where })
+    let payment = null
+    if (!mt.empty(orderData.extended.customerPaymentKey)) {
+      const customerPayment = await this.App.DB.models.mvlShopCustomerPayment.findOne({ where: { key: orderData.extended.customerPaymentKey } })
+      if (customerPayment !== null) {
+        payment = await customerPayment.getPayment()
+      }
+    }
+    if (payment === null) {
+      where = !this.MT.empty(orderData.payment)
+        ? {
+            [this.App.DB.S.Op.or]: {
+              id: orderData.payment,
+              key: orderData.payment
+            }
+          }
+        : { key: this.config.payment }
+      payment = await this.App.DB.models.mvlShopPayment.findOne({ where })
+    }
     if (payment === null) return this.failure('Payment not found')
     orderData.PaymentId = payment.id
 
     if (typeof orderData.delivery === 'number') where = { id: orderData.delivery }
     else if (typeof orderData.delivery === 'string') where = { key: orderData.delivery }
-    else where = { key: this.config.defaults.delivery }
+    else where = { key: this.config.delivery }
     const delivery = await this.App.DB.models.mvlShopDelivery.findOne({ where })
     if (delivery === null) return this.failure('Delivery not found')
     orderData.DeliveryId = delivery.id
 
+    console.log('ORDER DATA', orderData)
+
     const order = await this.App.DB.models.mvlShopOrder.build(orderData)
     const address = await this.App.DB.models.mvlShopOrderAddress.build(orderData)
 
+    console.log('ORDER COST BEFORE CREATE', order.cost)
     await this.create({ order, address, goods, payment, delivery })
-    await this.Status.new(order)
+    await this.Shop.OrderStatus.new(order)
+    const success = !!order.id
     const responseData = {
       order,
-      paymentLink: await this.Payment.link(order)
+      paymentLink: await this.Shop.Payment.link(order),
+      pageLink: await this.getPageLink(success, order)
     }
-    await this.Cart.clean(cart)
-    return this.response(!!order.id, '', responseData)
+    await this.Shop.Cart.clean(cart)
+    return this.response(success, '', responseData)
   }
 
   async create ({ order, address, goods, payment, delivery }) {
-    order.cost += await this.Delivery.cost(delivery, order)
-    order.cost += await this.Payment.cost(payment, order)
+    order.cost += await this.Shop.Delivery.cost(delivery, order)
+    console.log('ORDER COST WITH DELIVERY', order.cost)
+    order.cost += await this.Shop.Payment.cost(payment, order)
+    console.log('ORDER COST WITH PAYMENT', order.cost)
+    order.extended = order.extended || {}
     await order.save()
     await address.save()
+    console.log('ORDER CREATED. EXTENDED:', order.extended)
 
     await order.setAddress(address)
     await this.saveGoods(goods)
@@ -99,16 +125,32 @@ class OrderController extends MVLoaderBase {
   }
 
   async getOrderData (customer, cart, orderData = {}) {
-    return this.MT.merge(
+    orderData = this.MT.merge(
       {
         cost: cart.cost,
         cartCost: cart.cost,
-        CustomerId: customer.id
+        CustomerId: customer.id,
+        extended: {}
       },
       (await customer.getProfile()).get({ plain: true }),
       orderData,
       { id: null }
     )
+    // delete orderData.UserId
+    return orderData
+  }
+
+  async getPageLink (success = true, order) {
+    if (!this.MT.empty(this.config.hostUrl)) {
+      console.log('ORDER CONTROLLER. GET PAGE LINK. ORDER', order)
+      const url = new URL(this.config.hostUrl)
+      url.pathname = this.config[success ? 'pageSuccess' : 'pageFailure']
+      url.searchParams.append('orderId', typeof order === 'number' ? order : order.id)
+      const profile = await order.getCustomerProfile()
+      if (!this.MT.empty(profile?.language)) url.searchParams.append('language', profile.language)
+      return url.toString()
+    }
+    return ''
   }
 }
 

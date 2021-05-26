@@ -55,6 +55,10 @@ module.exports = (Sequelize) => {
           as: 'Customer'
         },
         {
+          model: 'mvlUserProfile',
+          as: 'CustomerProfile'
+        },
+        {
           model: 'mvlShopOrderAddress',
           as: 'Address'
         },

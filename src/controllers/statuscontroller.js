@@ -43,12 +43,12 @@ class StatusController extends MVLoaderBase {
 
     /**
      *
-     * @param {string} handler
+     * @param {string} controller
      * @param {string} methodName
      * @param {*} [params]
      * @return {basicResponse|*}
      */
-    this.call = (handler, methodName, params = []) => this.App.ext.semis.mvlShop.call(handler, methodName, params)
+    this.call = (controller, methodName, ...params) => this.App.ext.semis.mvlShop.call(controller, methodName, ...params)
   }
 
   async init () {
@@ -69,7 +69,7 @@ class StatusController extends MVLoaderBase {
     status = await this.get(status)
     if (!this.MT.empty(order)) {
       const currentStatus = await order.getStatus()
-      // console.log('STATUS CHAN?GE. CURRENT STATUS TYPE', typeof currentStatus, currentStatus, 'NEW STATUS', status)
+      // console.log('STATUS CHANGE. CURRENT STATUS TYPE', typeof currentStatus, currentStatus, 'NEW STATUS', status)
       if (this.MT.empty(currentStatus) || !currentStatus.finished || (currentStatus.fixed && currentStatus.rank < status.rank)) {
         return this.response(await order.setStatus(status), '', { order, status })
       }

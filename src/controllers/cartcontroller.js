@@ -68,6 +68,7 @@ class CartController extends MVLoaderBase {
       const cart = await this.get(cartOrCustomerId)
       if (cart) {
         cart.set('goods', {})
+        cart.set('cost', 0)
         return this.set(cart)
       }
       return this.failure('No cart')
@@ -89,6 +90,7 @@ class CartController extends MVLoaderBase {
           }
         }
       }
+      cart.cost = cost
       return { count, totalCount, cost, weight }
     }
 

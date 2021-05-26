@@ -8,20 +8,20 @@ class mvlShop extends MVLoaderBase {
 
     /**
      *
-     * @param {Object|string} handler
+     * @param {Object|string} controller
      * @param {string} methodName
      * @param {*} [params]
      * @return {basicResponse|*}
      */
-    this.call = (handler, methodName, params = []) => {
-      if (typeof handler === 'object') handler = handler.handler
-      if (!this.MT.empty(handler)) {
-        const method = this.MT.extract(handler + '.' + methodName)
+    this.call = (controller, methodName, ...params) => {
+      if (typeof controller === 'object') controller = controller.controller
+      if (!this.MT.empty(controller)) {
+        const method = this.MT.extract(controller + '.' + methodName)
         if (typeof method === 'function') {
           return method(...params)
         }
       }
-      return this.failure('Method not found', { handler, methodName })
+      return this.failure('Method not found', { controller, methodName })
     }
   }
 
@@ -32,6 +32,18 @@ class mvlShop extends MVLoaderBase {
   async initFinish () {
     await super.initFinish()
     await this.initFillDB()
+    this.assignControllers()
+  }
+
+  assignControllers () {
+    this.Cart = this.App.ext.controllers.mvlShopCart
+    this.CustomerPayment = this.App.ext.controllers.mvlShopCustomerPayment
+    this.Delivery = this.App.ext.controllers.mvlShopDelivery
+    this.Order = this.App.ext.controllers.mvlShopOrder
+    this.OrderStatus = this.App.ext.controllers.mvlShopOrderStatus
+    this.Payment = this.App.ext.controllers.mvlShopPayment
+    this.CustomerPayment = this.App.ext.controllers.mvlShopCustomerPayment
+    this.BackgroundPayment = this.App.ext.controllers.mvlShopBackgroundPayment
   }
 
   async initFillDB () {
@@ -63,6 +75,8 @@ mvlShop.exportConfig = {
       semis: {},
       controllers: {
         mvlShopCart: require('./controllers/cartcontroller'),
+        mvlShopBackgroundPayment: require('./controllers/backgroundpaymentcontroller'),
+        mvlShopCustomerPayment: require('./controllers/customerpaymentcontroller'),
         mvlShopOrder: require('./controllers/ordercontroller'),
         mvlShopOrderStatus: require('./controllers/statuscontroller'),
         mvlShopPayment: require('./controllers/paymentcontroller'),
@@ -84,7 +98,8 @@ mvlShop.exportConfig = {
             mvlShopOrderAddress: require('./models/mvlShopOrderAddress'),
             mvlShopOrderStatus: require('./models/mvlShopOrderStatus'),
             mvlShopPayment: require('./models/mvlShopPayment'),
-            mvlShopDelivery: require('./models/mvlShopDelivery')
+            mvlShopDelivery: require('./models/mvlShopDelivery'),
+            mvlShopCustomerPayment: require('./models/mvlShopCustomerPayment')
           }
         }
       },
