@@ -9,12 +9,29 @@ module.exports = (Sequelize) => {
         defaultValue: 0
       },
       weight: Sequelize.DECIMAL(11, 2),
+      active: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: true
+      },
+      rank: {
+        type: Sequelize.INTEGER,
+        defaultValue: 0
+      },
       image: Sequelize.STRING,
       thumb: Sequelize.STRING,
       extended: jsonField(Sequelize, 'extended')
     },
     // Model options
-    {},
+    {
+      indexes: [
+        {
+          fields: ['article']
+        },
+        {
+          fields: ['active']
+        }
+      ]
+    },
     // Model associations
     {
       belongsTo: [
@@ -23,25 +40,15 @@ module.exports = (Sequelize) => {
           as: 'Creator'
         },
         {
-          model: 'mvlShopCategory',
-          as: 'Category'
+          model: 'mvlShopProduct',
+          as: 'Product'
         }
       ],
       hasMany: [
         {
-          model: 'mvlShopOrderProduct',
-          as: 'Goods',
-          foreignKey: 'ProductId'
-        },
-        {
-          model: 'mvlShopProductOption',
+          model: 'mvlShopProductModOption',
           as: 'Options',
-          foreignKey: 'ProductId'
-        },
-        {
-          model: 'mvlShopProductMod',
-          as: 'Mods',
-          foreignKey: 'ProductId'
+          foreignKey: 'ModId'
         }
       ]
     }

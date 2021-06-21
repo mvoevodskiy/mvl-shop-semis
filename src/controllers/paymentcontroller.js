@@ -24,6 +24,18 @@ class PaymentController extends MVLoaderBase {
     }
 
     /**
+     * @param {number} id
+     * @param {boolean|null} active
+     * @return {Promise<mvlShopCustomerPayment[]>}
+     */
+    this.getAll = async (id = 0, active = true) => {
+      const where = {}
+      if (id) where.id = id
+      if (active !== null && active !== undefined) where.active = active
+      return this.App.DB.models.mvlShopPayment.findAll({ where, order: ['rank'], logging: console.log })
+    }
+
+    /**
      *
      * @param {int|mvlShopPayment} paymentNameOrId
      * @param {mvlShopOrder} order
@@ -33,10 +45,10 @@ class PaymentController extends MVLoaderBase {
       const payment = await this.get(paymentNameOrId)
       if (payment) {
         let cost = payment.cost
-        if (!this.MT.empty(payment.controller)) {
+        if (!mt.empty(payment.controller)) {
           cost = await this.call(payment.controller, 'cost', payment, order)
         }
-        console.log('PAYMENT COST', cost)
+        // console.log('PAYMENT COST', cost)
         return isNaN(cost) ? 0 : cost
       }
       return 0
@@ -136,7 +148,7 @@ class PaymentController extends MVLoaderBase {
     // console.log(orderOrId)
     const order = await this.Shop.Order.get(orderOrId)
     const payment = await order.getPayment()
-    console.log('PAYMENT CONTROLLER. GET PAYMENT AND ORDER. ORDER', order.get({ plain: true }), 'PAYMENT', payment.get({ plain: true }))
+    // console.log('PAYMENT CONTROLLER. GET PAYMENT AND ORDER. ORDER', order.get({ plain: true }), 'PAYMENT', payment.get({ plain: true }))
     return { payment, order }
   }
 }

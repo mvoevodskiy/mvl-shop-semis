@@ -44,7 +44,7 @@ class BackgroundPaymentController extends MVLoaderBase {
       await order.save()
       const response = await this.Shop.Payment.saved(order)
       success = response.success
-      console.log('BACKGROUND PAYMENT. CUSTOMER PAYMENT ID', customerPayment.id, 'SUCCESS? ', success)
+      // console.log('BACKGROUND PAYMENT. CUSTOMER PAYMENT ID', customerPayment.id, 'SUCCESS? ', success)
       if (success) break
     }
     return this.response(success, '', { order })

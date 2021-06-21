@@ -1,10 +1,26 @@
 const { MVLoaderBase } = require('mvloader')
+const mt = require('mvtools')
 
 class mvlShop extends MVLoaderBase {
   constructor (App, ...config) {
-    const localDefaults = {}
+    const localDefaults = {
+      controlRemains: false,
+      allowZeroMod: true
+    }
     super(localDefaults, ...config)
     this.App = App
+
+    this.ERROR_CODES = {
+      UNKNOWN_INPUT: 1,
+
+      PRODUCT_NOT_FOUND: 10,
+      PRODUCT_IS_EMPTY: 11,
+
+      MOD_NOT_FOUND: 20,
+      MOD_EMPTY_NOT_ALLOWED: 21,
+
+      CART_NOT_FOUND: 30
+    }
 
     /**
      *
@@ -15,8 +31,8 @@ class mvlShop extends MVLoaderBase {
      */
     this.call = (controller, methodName, ...params) => {
       if (typeof controller === 'object') controller = controller.controller
-      if (!this.MT.empty(controller)) {
-        const method = this.MT.extract(controller + '.' + methodName)
+      if (!mt.empty(controller)) {
+        const method = mt.extract(controller + '.' + methodName)
         if (typeof method === 'function') {
           return method(...params)
         }
@@ -37,11 +53,14 @@ class mvlShop extends MVLoaderBase {
 
   assignControllers () {
     this.Cart = this.App.ext.controllers.mvlShopCart
-    this.CustomerPayment = this.App.ext.controllers.mvlShopCustomerPayment
+    this.CustomerAccount = this.App.ext.controllers.mvlShopCustomerAccount
+    this.CustomerAccountLog = this.App.ext.controllers.mvlShopCustomerAccountLog
     this.Delivery = this.App.ext.controllers.mvlShopDelivery
     this.Order = this.App.ext.controllers.mvlShopOrder
     this.OrderStatus = this.App.ext.controllers.mvlShopOrderStatus
     this.Payment = this.App.ext.controllers.mvlShopPayment
+    this.Product = this.App.ext.controllers.mvlShopProduct
+    this.ProductMod = this.App.ext.controllers.mvlShopProductMod
     this.CustomerPayment = this.App.ext.controllers.mvlShopCustomerPayment
     this.BackgroundPayment = this.App.ext.controllers.mvlShopBackgroundPayment
   }
@@ -74,13 +93,16 @@ mvlShop.exportConfig = {
     classes: {
       semis: {},
       controllers: {
+        mvlShopProduct: require('./controllers/productcontroller'),
         mvlShopCart: require('./controllers/cartcontroller'),
         mvlShopBackgroundPayment: require('./controllers/backgroundpaymentcontroller'),
         mvlShopCustomerPayment: require('./controllers/customerpaymentcontroller'),
+        mvlShopCustomerAccount: require('./controllers/customeraccountcontroller'),
         mvlShopOrder: require('./controllers/ordercontroller'),
         mvlShopOrderStatus: require('./controllers/statuscontroller'),
         mvlShopPayment: require('./controllers/paymentcontroller'),
-        mvlShopDelivery: require('./controllers/deliverycontroller')
+        mvlShopDelivery: require('./controllers/deliverycontroller'),
+        mvlShopOverride: require('./controllers/overridecontroller')
       },
       handlers: {}
     },
@@ -92,6 +114,9 @@ mvlShop.exportConfig = {
           models: {
             mvlShopCategory: require('./models/mvlShopCategory'),
             mvlShopProduct: require('./models/mvlShopProduct'),
+            mvlShopProductOption: require('./models/mvlShopProductOption'),
+            mvlShopProductMod: require('./models/mvlShopProductMod'),
+            mvlShopProductModOption: require('./models/mvlShopProductModOption'),
             mvlShopCart: require('./models/mvlShopCart'),
             mvlShopOrder: require('./models/mvlShopOrder'),
             mvlShopOrderProduct: require('./models/mvlShopOrderProduct'),
@@ -99,6 +124,8 @@ mvlShop.exportConfig = {
             mvlShopOrderStatus: require('./models/mvlShopOrderStatus'),
             mvlShopPayment: require('./models/mvlShopPayment'),
             mvlShopDelivery: require('./models/mvlShopDelivery'),
+            mvlShopCustomerAccount: require('./models/mvlShopCustomerAccount'),
+            mvlShopCustomerAccountLog: require('./models/mvlShopCustomerAccountLog'),
             mvlShopCustomerPayment: require('./models/mvlShopCustomerPayment')
           }
         }

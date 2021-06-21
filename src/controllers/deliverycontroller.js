@@ -1,4 +1,5 @@
 const { MVLoaderBase } = require('mvloader')
+const mt = require('mvtools')
 
 class DeliveryController extends MVLoaderBase {
   constructor (App, ...config) {
@@ -6,9 +7,9 @@ class DeliveryController extends MVLoaderBase {
     super(localDefaults, ...config)
     this.App = App
 
-    this.get = (deliveryNameOrId) => {
+    this.get = async (deliveryNameOrId) => {
       if (typeof deliveryNameOrId !== 'object') {
-        const payment = this.App.DB.models.mvlShopPayment.findOne({
+        const payment = await this.App.DB.models.mvlShopPayment.findOne({
           where: {
             [this.App.DB.S.Op.or]: {
               id: deliveryNameOrId,
@@ -31,10 +32,10 @@ class DeliveryController extends MVLoaderBase {
       const delivery = this.get(deliveryNameOrId)
       if (delivery) {
         let cost = delivery.cost
-        if (!this.MT.empty(delivery.controller)) {
+        if (!mt.empty(delivery.controller)) {
           cost = await this.call(delivery.controller, 'cost', delivery, order)
         }
-        console.log('DELIVERY COST', cost)
+        // console.log('DELIVERY COST', cost)
         return isNaN(cost) ? 0 : cost
       }
       return 0

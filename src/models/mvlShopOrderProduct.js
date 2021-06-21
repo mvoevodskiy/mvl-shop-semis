@@ -57,6 +57,10 @@ module.exports = (Sequelize) => {
         {
           model: 'mvlShopProduct',
           as: 'Product'
+        },
+        {
+          model: 'mvlShopProductMod',
+          as: 'Mod'
         }
       ]
     }

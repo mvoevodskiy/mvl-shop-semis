@@ -1,4 +1,5 @@
 const { MVLoaderBase } = require('mvloader')
+const mt = require('mvtools')
 
 class StatusController extends MVLoaderBase {
   constructor (App, ...config) {
@@ -8,17 +9,17 @@ class StatusController extends MVLoaderBase {
 
     this.get = async (statusNameOrKeyOrId) => {
       if (typeof statusNameOrKeyOrId !== 'object') {
-        const payment = await this.App.DB.models.mvlShopOrderStatus.findOne({
-          where: {
+        let where = {}
+        if (typeof statusNameOrKeyOrId === 'string') {
+          where = {
             [this.App.DB.S.Op.or]: {
               id: statusNameOrKeyOrId,
               name: statusNameOrKeyOrId,
               key: statusNameOrKeyOrId
             }
-          },
-          logging: console.log
-        })
-        return payment
+          }
+        } else where.id = statusNameOrKeyOrId
+        return await this.App.DB.models.mvlShopOrderStatus.findOne({ where, logging: console.log })
       }
       return (typeof statusNameOrKeyOrId === 'object') ? statusNameOrKeyOrId : this.failure('Unknown type of input parameter')
     }
@@ -67,7 +68,7 @@ class StatusController extends MVLoaderBase {
   async change ({ order, status }) {
     order = await this.Order.get(order)
     status = await this.get(status)
-    if (!this.MT.empty(order)) {
+    if (!mt.empty(order)) {
       const currentStatus = await order.getStatus()
       // console.log('STATUS CHANGE. CURRENT STATUS TYPE', typeof currentStatus, currentStatus, 'NEW STATUS', status)
       if (this.MT.empty(currentStatus) || !currentStatus.finished || (currentStatus.fixed && currentStatus.rank < status.rank)) {

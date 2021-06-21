@@ -69,7 +69,7 @@ class CustomerPaymentController extends MVLoaderBase {
         extended: {}
       }
       const allValues = this.MT.mergeRecursive(defValues, values)
-      if (this.MT.empty(allValues.name)) allValues.name = allValues.key + ' ' + allValues.mask
+      if (mt.empty(allValues.name)) allValues.name = allValues.key + ' ' + allValues.mask
       if (creator !== null) {
         allValues.CreatorId = typeof creator === 'object' ? creator.id : creator
       }

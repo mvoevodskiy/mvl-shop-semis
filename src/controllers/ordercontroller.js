@@ -44,6 +44,7 @@ class OrderController extends MVLoaderBase {
       if (Object.prototype.hasOwnProperty.call(cart.goods, key)) {
         const good = await this.App.DB.models.mvlShopOrderProduct.build(cart.goods[key])
         good.ProductId = cart.goods[key].productId
+        good.ModId = cart.goods[key].modId
         goods.push(good)
       }
     }
@@ -51,14 +52,16 @@ class OrderController extends MVLoaderBase {
     let where = {}
 
     let payment = null
-    if (!mt.empty(orderData.extended.customerPaymentKey)) {
-      const customerPayment = await this.App.DB.models.mvlShopCustomerPayment.findOne({ where: { key: orderData.extended.customerPaymentKey } })
+    if (!mt.empty(orderData.extended.customerPaymentKey) || !mt.empty(orderData.extended.customerPaymentId)) {
+      if (!mt.empty(orderData.extended.customerPaymentId)) where = { id: orderData.extended.customerPaymenId }
+      else if (!mt.empty(orderData.extended.customerPaymentKey)) where = { key: orderData.extended.customerPaymentKey }
+      const customerPayment = await this.App.DB.models.mvlShopCustomerPayment.findOne({ where })
       if (customerPayment !== null) {
         payment = await customerPayment.getPayment()
       }
     }
     if (payment === null) {
-      where = !this.MT.empty(orderData.payment)
+      where = !mt.empty(orderData.payment)
         ? {
             [this.App.DB.S.Op.or]: {
               id: orderData.payment,
@@ -78,12 +81,12 @@ class OrderController extends MVLoaderBase {
     if (delivery === null) return this.failure('Delivery not found')
     orderData.DeliveryId = delivery.id
 
-    console.log('ORDER DATA', orderData)
+    // console.log('ORDER DATA', orderData)
 
     const order = await this.App.DB.models.mvlShopOrder.build(orderData)
     const address = await this.App.DB.models.mvlShopOrderAddress.build(orderData)
 
-    console.log('ORDER COST BEFORE CREATE', order.cost)
+    // console.log('ORDER COST BEFORE CREATE', order.cost)
     await this.create({ order, address, goods, payment, delivery })
     await this.Shop.OrderStatus.new(order)
     const success = !!order.id
@@ -98,13 +101,13 @@ class OrderController extends MVLoaderBase {
 
   async create ({ order, address, goods, payment, delivery }) {
     order.cost += await this.Shop.Delivery.cost(delivery, order)
-    console.log('ORDER COST WITH DELIVERY', order.cost)
+    // console.log('ORDER COST WITH DELIVERY', order.cost)
     order.cost += await this.Shop.Payment.cost(payment, order)
-    console.log('ORDER COST WITH PAYMENT', order.cost)
+    // console.log('ORDER COST WITH PAYMENT', order.cost)
     order.extended = order.extended || {}
     await order.save()
     await address.save()
-    console.log('ORDER CREATED. EXTENDED:', order.extended)
+    // console.log('ORDER CREATED. EXTENDED:', order.extended)
 
     await order.setAddress(address)
     await this.saveGoods(goods)
@@ -141,13 +144,13 @@ class OrderController extends MVLoaderBase {
   }
 
   async getPageLink (success = true, order) {
-    if (!this.MT.empty(this.config.hostUrl)) {
-      console.log('ORDER CONTROLLER. GET PAGE LINK. ORDER', order)
+    if (!mt.empty(this.config.hostUrl)) {
+      // console.log('ORDER CONTROLLER. GET PAGE LINK. ORDER', order)
       const url = new URL(this.config.hostUrl)
       url.pathname = this.config[success ? 'pageSuccess' : 'pageFailure']
       url.searchParams.append('orderId', typeof order === 'number' ? order : order.id)
       const profile = await order.getCustomerProfile()
-      if (!this.MT.empty(profile?.language)) url.searchParams.append('language', profile.language)
+      if (!mt.empty(profile?.language)) url.searchParams.append('language', profile.language)
       return url.toString()
     }
     return ''

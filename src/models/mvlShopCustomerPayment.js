@@ -51,7 +51,14 @@ module.exports = (Sequelize) => {
           fields: ['key'],
           unique: true
         }
-      ]
+      ],
+      scope: {
+        active: {
+          where: {
+            active: true
+          }
+        }
+      }
     },
     // Model associations
     {

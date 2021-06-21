@@ -1,4 +1,5 @@
 const { MVLoaderBase } = require('mvloader')
+const mt = require('mvtools')
 
 class CartController extends MVLoaderBase {
   constructor (App, ...config) {
@@ -12,6 +13,7 @@ class CartController extends MVLoaderBase {
      * @return {Promise<mvlShopCart|boolean>}
      */
     this.get = async (cartOrCustomerId) => {
+      // console.log(cartOrCustomerId)
       if (typeof cartOrCustomerId === 'number') {
         let cart = await this.App.DB.models.mvlShopCart.findOne({ where: { CustomerId: cartOrCustomerId } })
         if (cart === null) cart = await this.App.DB.models.mvlShopCart.build({ CustomerId: cartOrCustomerId })
@@ -25,23 +27,23 @@ class CartController extends MVLoaderBase {
       return cart.save()
     }
 
-    this.add = async (cartOrCustomerId, product, count, options = {}) => {
+    this.add = async (cartOrCustomerId, productOrId, modOrId, count, options = {}) => {
       const cart = await this.get(cartOrCustomerId)
-      product = await this.getProduct(product)
+      const { product, mod } = await this.getProductAndMod(productOrId, modOrId)
       // console.log(product)
-      if (this.MT.empty(cart)) return this.failure('Empty cart')
-      if (this.MT.empty(product)) return this.failure('Empty product')
-      const key = this.getKey(product, options)
-      if (key in cart.goods) return this.change(cart, key, count)
+      if (mt.empty(cart)) return this.failure('Empty cart', {}, this.Shop.ERROR_CODES.CART_NOT_FOUND)
+      if (mt.empty(product)) return this.failure('Empty product', {}, this.Shop.ERROR_CODES.PRODUCT_IS_EMPTY)
+      if ((mt.empty(mod) || !mod.id) && !this.Shop.config.allowZeroMod) return this.failure('Empty mod', {}, this.Shop.ERROR_CODES.MOD_EMPTY_NOT_ALLOWED)
+      const key = this.getKey(product, mod, options)
+      if (key in cart.goods) return this.change(cart, key, cart.goods[key].count + count)
       const goods = cart.goods
-      const good = this.getGood(product, count)
-      goods[key] = good
+      goods[key] = this.getGood(product, mod, count)
       cart.set('goods', goods)
       return this.set(cart)
     }
 
     this.change = async (cartOrCustomerId, key, count) => {
-      console.log('CART CHANGE. KEY', key, 'COUNT', count)
+      // console.log('CART CHANGE. KEY', key, 'COUNT', count)
       const cart = await this.get(cartOrCustomerId)
       if (cart) {
         const goods = cart.goods
@@ -64,7 +66,7 @@ class CartController extends MVLoaderBase {
       return this.failure('No cart')
     }
 
-    this.clean = async (cartOrCustomerId, key) => {
+    this.clean = async (cartOrCustomerId) => {
       const cart = await this.get(cartOrCustomerId)
       if (cart) {
         cart.set('goods', {})
@@ -94,20 +96,41 @@ class CartController extends MVLoaderBase {
       return { count, totalCount, cost, weight }
     }
 
-    this.getKey = (product, options) => this.MT.md5(product.id + product.price + JSON.stringify(options))
+    this.getKey = (product, mod, options) => this.MT.md5(product.id + product.price + mod.id + mod.price + JSON.stringify(options))
 
-    this.getProduct = async (productId) => {
-      return (typeof product === 'number') ? await this.App.DB.models.mvlShopProduct.findByPk(productId) : productId
+    /**
+     *
+     * @param {mvlShopProduct|number} productOrId
+     * @param {mvlShopProductMod|number|null} modOrId
+     * @return {Promise<{product: mvlShopProduct|null, mod: mvlShopProductMod|null}>}
+     */
+    this.getProductAndMod = async (productOrId, modOrId = null) => {
+      const product = await this.Shop.Product.get(productOrId)
+      let mod = modOrId
+      if (typeof modOrId === 'number') {
+        mod = await this.App.DB.models.mvlShopProductMod.findByPk(modOrId)
+      }
+      if (!(mod instanceof this.App.DB.models.mvlShopProductMod) && product instanceof this.App.DB.models.mvlShopProduct) {
+        mod = this.App.DB.models.mvlShopProductMod.build({
+          id: null,
+          name: product.name,
+          price: product.price,
+          weight: product.weight
+        })
+      }
+      return { product, mod }
     }
 
-    this.getGood = (product, count = 1, options = {}) => {
+    this.getGood = (product, mod, count = 1, options = {}) => {
+      const isMod = mod instanceof this.App.DB.models.mvlShopProductMod
       return {
         productId: product.id,
-        name: product.name,
-        price: product.price,
+        modId: isMod ? mod.id : null,
+        name: isMod && !mt.empty(mod.name) ? mod.name : product.name,
+        price: isMod ? mod.price : product.price,
         count,
-        cost: product.price * count,
-        weight: product.weight,
+        cost: (isMod ? mod.price : product.price) * count,
+        weight: isMod && mod.weight ? mod.weight : product.weight,
         options
       }
     }
@@ -119,6 +142,7 @@ class CartController extends MVLoaderBase {
 
   async initFinish () {
     super.initFinish()
+    this.Shop = this.App.ext.semis.mvlShop
   }
 }
 
