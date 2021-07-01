@@ -150,7 +150,7 @@ class OrderController extends MVLoaderBase {
       url.pathname = this.config[success ? 'pageSuccess' : 'pageFailure']
       url.searchParams.append('orderId', typeof order === 'number' ? order : order.id)
       const profile = await order.getCustomerProfile()
-      if (!mt.empty(profile?.language)) url.searchParams.append('language', profile.language)
+      if (!mt.empty(profile) && !mt.empty(profile.language) && typeof profile === 'object' && !mt.empty(profile.language)) url.searchParams.append('language', profile.language)
       return url.toString()
     }
     return ''
