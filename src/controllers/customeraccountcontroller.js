@@ -82,7 +82,7 @@ class CustomerAccountController extends MVLoaderBase {
   }
 
   async accountLog (account, amount, values = {}) {
-    return await account.createLog(mt.merge(values, { amount, type: account.type }))
+    return await account.createLog(mt.merge(values, { amount, type: account.type, CustomerId: account.CustomerId }))
   }
 }
 
