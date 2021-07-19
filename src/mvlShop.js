@@ -5,7 +5,8 @@ class mvlShop extends MVLoaderBase {
   constructor (App, ...config) {
     const localDefaults = {
       controlRemains: false,
-      allowZeroMod: true
+      allowZeroMod: true,
+      goodFullNames: false
     }
     super(localDefaults, ...config)
     this.App = App
