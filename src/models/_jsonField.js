@@ -13,7 +13,7 @@ module.exports = function (Sequelize, field) {
     },
     set (val) {
       try {
-        val = typeof val === 'string' ? val : JSON.stringify(val)
+        val = JSON.stringify(val)
       } catch (e) {
         console.error('SETTER OF ' + field + ' FIELD OF MODEL mvlShopProduct. SETTING EMPTY OBJECT. ERROR', e)
         return '{}'
