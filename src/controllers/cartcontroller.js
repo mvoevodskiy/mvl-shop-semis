@@ -126,7 +126,7 @@ class CartController extends MVLoaderBase {
       return {
         productId: product.id,
         modId: isMod ? mod.id : null,
-        name: isMod && !mt.empty(mod.name) ? (this.App.config.goodFullNames ? product.name + ' ' + mod.name : mod.name) : product.name,
+        name: isMod && !mt.empty(mod.name) ? (this.Shop.config.goodFullNames ? product.name + ' ' + mod.name : mod.name) : product.name,
         price: isMod ? mod.price : product.price,
         count,
         cost: (isMod ? mod.price : product.price) * count,
